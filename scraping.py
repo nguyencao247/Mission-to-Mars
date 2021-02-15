@@ -4,7 +4,6 @@ from splinter import Browser
 from bs4 import BeautifulSoup as soup
 import pandas as pd
 import datetime as dt
-from webdriver_manager.chrome import ChromeDriverManager
 
 # Set the executable path and initialize the chrome browser in splinter
 def scrape_all():
@@ -20,8 +19,10 @@ def scrape_all():
         "news_paragraph": news_paragraph,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
+        "hemispheres": hemisphere_data(browser),
         "last_modified": dt.datetime.now()
         }
+
     # Stop webdriver and return data
     browser.quit()
     return data
@@ -79,18 +80,48 @@ def featured_image(browser):
 
 def mars_facts():
     # Add try/except for error handling
-    try:
+   # try:
         # Read website table as df
-        df = pd.read_html('http://space-facts.com/mars/')[0]
-    except BaseException:
-        return None
+    df = pd.read_html('http://space-facts.com/mars/')[0]
+   # except BaseException:
+        # return None
 
     # Assign columns and set index of dataframe    
-    df.columns=['description', 'value']
-    df.set_index('description', inplace=True)
+    df.columns=['Description', 'Mars']
+    df.set_index('Description', inplace=True)
 
     # Convert dataframe into HTML format, add bootstrap
     return df.to_html()
+
+def hemisphere_data(browser):
+    # 1. Use browser to visit the URL 
+    url = 'https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
+    browser.visit(url)
+
+    # 2. Create a list to hold the images and titles.
+    hemisphere_image_urls = []
+
+    # 3. Write code to retrieve the image urls and titles for each hemisphere.
+    for x in range(0,4):
+        # loop through ad click on hemisphere link
+        images_link = browser.links.find_by_partial_text('Hemisphere')[x]
+        images_link.click()
+        html = browser.html
+        img_soup = soup(html, 'html.parser')
+        #retrieve full-res image URL string and title for each hemisphere image
+        url_image_rel = img_soup.find('img', class_='wide-image').get('src')
+        img_url = 'https://astrogeology.usgs.gov'+url_image_rel
+        title = img_soup.find('h2', class_='title').get_text()
+        #create dictionary to store variables
+        hemispheres = {
+            "img_url": img_url,
+            "title": title
+        }
+        #add to list
+        hemisphere_image_urls.append(hemispheres)
+        # go back to previous page
+        browser.back()
+    return hemisphere_image_urls
 
 if __name__ == "__main__":
     # If running as script, print scraped data
